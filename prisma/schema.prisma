@@ -1,0 +1,84 @@
+// Prisma schema — Plateforme OTT RTVC Koumé
+// DUT IUT Ngaoundéré — projet streaming chrétien
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  password      String
+  role          String         @default("USER") // USER | ADMIN
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+  views         ViewStat[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  videos      Video[]
+}
+
+model Video {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  thumbnailUrl String?
+  videoUrl     String
+  duration     Int       @default(0) // seconds
+  categoryId   String
+  category     Category  @relation(fields: [categoryId], references: [id])
+  isLive       Boolean   @default(false)
+  isPublished  Boolean   @default(true)
+  viewCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  publishedAt  DateTime  @default(now())
+  views        ViewStat[]
+}
+
+model Subscription {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           String      // MONTHLY | YEARLY | PREMIUM
+  status         String      @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED
+  startedAt      DateTime    @default(now())
+  expiresAt      DateTime
+  payments       Payment[]
+  createdAt      DateTime    @default(now())
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amount         Float
+  currency       String       @default("XAF")
+  method         String       // MOBILE_MONEY | CARD
+  status         String       @default("COMPLETED") // PENDING | COMPLETED | FAILED
+  reference      String?
+  createdAt      DateTime     @default(now())
+}
+
+model ViewStat {
+  id        String   @id @default(cuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  watchedAt DateTime @default(now())
+  duration  Int      @default(0)
+  ip        String?
+}
